@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 from flask import (
     Blueprint,
@@ -42,7 +43,10 @@ def _render_index(**context):
 
 
 def _safe_redirect_target(next_url: str | None) -> str:
-    if next_url and next_url.startswith("/") and not next_url.startswith("//"):
+    if not next_url:
+        return url_for("web.index")
+    parsed_url = urlparse(next_url)
+    if not parsed_url.netloc and parsed_url.path.startswith("/"):
         return next_url
     return url_for("web.index")
 

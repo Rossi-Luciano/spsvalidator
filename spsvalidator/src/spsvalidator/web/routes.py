@@ -33,10 +33,10 @@ def _current_translations():
 
 
 def _render_index(**context):
+    context.setdefault("error_message", None)
     return render_template(
         "index.html",
         history_items=list_validations(current_app.config["DB_PATH"]),
-        error_message=None,
         **context,
     )
 

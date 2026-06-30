@@ -61,6 +61,69 @@ def test_run_validation_persists_result(monkeypatch, tmp_path):
     assert b"ERROR" in csv_response.data
 
 
+def test_run_validation_persists_bytes_in_report(monkeypatch, tmp_path):
+    app = create_app(str(tmp_path))
+    db_path = app.config["DB_PATH"]
+
+    def fake_validate(zip_path: str):
+        return {
+            "rows": [
+                {
+                    "group": "g",
+                    "title": "t",
+                    "response": "ERROR",
+                    "expected_value": b"expected",
+                    "got_value": b"got",
+                }
+            ],
+            "exceptions": [{"response": "exception", "detail": b"fail"}],
+            "articles": [
+                {
+                    "xml_path": "article.xml",
+                    "title": "Article",
+                    "authors_text": "A B",
+                    "doi": "",
+                    "pid": "",
+                    "article_status": "issue",
+                    "issue_count": 1,
+                }
+            ],
+        }
+
+    monkeypatch.setattr(validation_service, "validate_sps_zip", fake_validate)
+
+    class UploadedFile:
+        filename = "package.zip"
+
+        def save(self, destination):
+            Path(destination).write_bytes(b"zip")
+
+    result = validation_service.run_validation(db_path, UploadedFile())
+    client = app.test_client()
+    response = client.get(f"/validation/{result['history_id']}/report.csv")
+    assert response.status_code == 200
+    assert b"expected" in response.data
+    assert b"got" in response.data
+
+
+def test_validate_route_shows_error_on_failure(monkeypatch, tmp_path):
+    app = create_app(str(tmp_path))
+
+    def fake_validate(zip_path: str):
+        raise RuntimeError("validation failed")
+
+    monkeypatch.setattr(validation_service, "validate_sps_zip", fake_validate)
+    client = app.test_client()
+    response = client.post(
+        "/validate",
+        data={"package_zip": (_zip_fixture_xml(), "package.zip")},
+        content_type="multipart/form-data",
+    )
+    html = response.get_data(as_text=True)
+    assert response.status_code == 200
+    assert "validation failed" in html
+
+
 def test_set_language_switches_ui_text(tmp_path):
     app = create_app(str(tmp_path))
     client = app.test_client()

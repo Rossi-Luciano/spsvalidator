@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from urllib.parse import urlparse
 
 from flask import (
     Blueprint,
@@ -33,12 +34,21 @@ def _current_translations():
 
 
 def _render_index(**context):
+    context.setdefault("error_message", None)
     return render_template(
         "index.html",
         history_items=list_validations(current_app.config["DB_PATH"]),
-        error_message=None,
         **context,
     )
+
+
+def _safe_redirect_target(next_url: str | None) -> str:
+    if not next_url:
+        return url_for("web.index")
+    parsed_url = urlparse(next_url)
+    if not parsed_url.netloc and parsed_url.path.startswith("/"):
+        return next_url
+    return url_for("web.index")
 
 
 def _redirect_with_lang(endpoint: str, **values):
@@ -98,7 +108,7 @@ def download_csv(history_id: str):
 @web_blueprint.get("/language/<language_code>")
 def set_language(language_code: str):
     language = normalize_language(language_code)
-    redirect_target = request.args.get("next") or url_for("web.index")
+    redirect_target = _safe_redirect_target(request.args.get("next"))
     response = make_response(redirect(redirect_target))
     response.set_cookie("lang", language, max_age=60 * 60 * 24 * 365)
     return response

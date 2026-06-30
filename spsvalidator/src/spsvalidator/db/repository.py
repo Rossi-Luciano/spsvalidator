@@ -6,6 +6,16 @@ import uuid
 from datetime import UTC, datetime
 
 
+def _json_safe(value):
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace")
+    if isinstance(value, dict):
+        return {key: _json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(item) for item in value]
+    return value
+
+
 def init_db(db_path: str) -> None:
     with sqlite3.connect(db_path) as connection:
         connection.execute("""

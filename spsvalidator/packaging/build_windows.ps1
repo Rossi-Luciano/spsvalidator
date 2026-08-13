@@ -8,7 +8,7 @@ python -m pip install -e ".[dev]"
 python -m pip install pyinstaller
 pybabel compile -d src/spsvalidator/translations
 & "$PSScriptRoot\generate_build_info.ps1"
-pyinstaller --noconfirm --windowed `
+pyinstaller --noconfirm --clean --onefile --windowed `
   --name spsvalidator `
   --icon src/spsvalidator/web/static/img/icon.png `
   --paths src `

@@ -249,7 +249,7 @@ Note:
 
 - Script prints guidance to convert the dist binary to AppImage using `linuxdeploy/appimagetool`
 
-### Windows (`.exe`)
+### Windows (single-file executable)
 
 PowerShell command:
 
@@ -259,7 +259,22 @@ powershell -ExecutionPolicy Bypass -File packaging/build_windows.ps1
 
 Output:
 
-- `dist/spsvalidator.exe`
+```text
+dist/spsvalidator.exe
+```
+
+The build uses PyInstaller's `--onefile` mode. The resulting executable
+contains Python and the application's packaged dependencies, so Python does
+not need to be installed on the target computer.
+
+Build the executable on Windows. PyInstaller does not produce Windows
+executables when run on Linux or macOS.
+
+Before publishing a release, copy `spsvalidator.exe` to an empty directory
+and verify that it starts without an `_internal` directory or other files
+beside it. The first launch may take a little longer while PyInstaller extracts
+the bundled components to a temporary directory managed by the operating
+system.
 
 ## Tests
 

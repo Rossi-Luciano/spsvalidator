@@ -112,3 +112,23 @@ def test_validate_sps_xml_with_pre_counts_every_row_as_article_issue(tmp_path, x
     assert result["rows"]
     assert result["article"]["issue_count"] == len(result["rows"])
     assert result["article"]["article_status"] == "issue"
+
+
+@pytest.mark.parametrize("extra_files", [{}, {"readme.txt": b"x"}])
+def test_validate_sps_xml_with_pre_flags_missing_pdf_regardless_of_other_files(tmp_path, extra_files):
+    zip_path = _make_zip(tmp_path, _article_xml(), extra_files=extra_files)
+
+    xml_with_pre = next(XMLWithPre.create(path=zip_path))
+    result = validate_sps_xml_with_pre(xml_with_pre)
+
+    rendition_rows = [r for r in result["rows"] if r["subject"] == "Renditions"]
+    assert [r["data"]["name"] for r in rendition_rows] == ["article.pdf"]
+
+
+def test_validate_sps_xml_with_pre_does_not_flag_present_pdf(tmp_path):
+    zip_path = _make_zip(tmp_path, _article_xml(), extra_files={"article.pdf": b"%PDF"})
+
+    xml_with_pre = next(XMLWithPre.create(path=zip_path))
+    result = validate_sps_xml_with_pre(xml_with_pre)
+
+    assert not any(r["subject"] == "Renditions" for r in result["rows"])

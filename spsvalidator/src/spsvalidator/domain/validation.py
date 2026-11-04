@@ -5,6 +5,7 @@ from pathlib import PurePosixPath
 
 from lxml import etree
 from packtools.sps.models.article_license import ArticleLicense
+from packtools.sps.pid_provider.models.article_renditions import ArticleRenditions
 from packtools.sps.pid_provider.models.journal_meta import JournalID, Publisher, Title
 from packtools.sps.pid_provider.xml_sps_lib import XMLWithPre
 from packtools.sps.validation.xml_validator import get_validation_results
@@ -48,6 +49,28 @@ def _extract_journal_data(xmltree):
         return {}
 
 
+def _expected_renditions(xml_with_pre) -> list[dict]:
+    """PDFs que o XML declara, com o nome que o pacote deve ter.
+
+    O packtools 4.18.3 devolve ``renditions == []`` quando ``zip_namelist`` está
+    vazia, e o carregador do zip não põe os XMLs nessa lista. Num pacote só com
+    o XML, a ausência dos PDFs deixaria de ser verificada. Nesse caso os nomes
+    são montados aqui, com a mesma regra do packtools.
+    """
+    if xml_with_pre.zip_namelist:
+        return list(xml_with_pre.renditions)
+    items = []
+    for rendition in ArticleRenditions(xml_with_pre.xmltree).article_renditions:
+        suffix = ".pdf" if rendition.is_main_language else f"-{rendition.language}.pdf"
+        items.append({
+            "name": f"{xml_with_pre.xml_name}{suffix}",
+            "lang": rendition.language,
+            "component_type": "rendition",
+            "main": rendition.is_main_language,
+        })
+    return items
+
+
 def validate_sps_xml_with_pre(xml_with_pre) -> dict:
     """Valida um único artigo já parseado (``xml_with_pre``).
 
@@ -61,7 +84,7 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
     rows = []
     exceptions = []
 
-    for rendition in xml_with_pre.renditions:
+    for rendition in _expected_renditions(xml_with_pre):
         if rendition["name"] not in files_in_zip:
             lang = rendition["lang"]
             rows.append({

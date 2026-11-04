@@ -60,7 +60,6 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
 
     rows = []
     exceptions = []
-    issues_by_parent = {}
 
     for rendition in xml_with_pre.renditions:
         if rendition["name"] not in files_in_zip:
@@ -105,12 +104,11 @@ def validate_sps_xml_with_pre(xml_with_pre) -> dict:
             "data": dict(result),
         }
         rows.append(row)
-        parent_key = result.get("parent") or result.get("parent_id") or ""
-        if parent_key:
-            issues_by_parent[parent_key] = issues_by_parent.get(parent_key, 0) + 1
 
     article = extract_article_snapshot(etree.tostring(xmltree), xml_with_pre.filename)
-    issue_count = issues_by_parent.get(article.get("xml_path", ""), 0)
+    # Todas as linhas vêm deste XML. O ``parent`` dos resultados é o elemento
+    # (article, sub-article), não o arquivo, e não serve para associá-los ao artigo.
+    issue_count = len(rows)
     article["issue_count"] = issue_count
     article["article_status"] = "issue" if issue_count else "ok"
 
